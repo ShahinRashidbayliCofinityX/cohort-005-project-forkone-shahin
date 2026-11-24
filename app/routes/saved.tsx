@@ -78,7 +78,7 @@ export default function Saved({ loaderData }: Route.ComponentProps) {
                 return (
                   <SavedLessonCard key={note.id} lesson={note.lesson}>
                     {/* Plain text — a Note is never rendered as Markdown. */}
-                    <p className="mt-2 whitespace-pre-wrap break-words border-l-2 border-border pl-3 text-sm leading-relaxed text-foreground/90 [overflow-wrap:anywhere]">
+                    <p className="mt-2 whitespace-pre-wrap border-l-2 border-border pl-3 text-sm leading-relaxed text-foreground/90 [overflow-wrap:anywhere]">
                       {preview.text}
                     </p>
                     <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
