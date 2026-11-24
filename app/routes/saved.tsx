@@ -87,7 +87,7 @@ export default function Saved({ loaderData }: Route.ComponentProps) {
                       </span>
                       {preview.truncated && (
                         <Link
-                          to={`/courses/${note.lesson.courseSlug}/lessons/${note.lesson.id}`}
+                          to={lessonPath(note.lesson)}
                           className="font-medium text-foreground hover:underline"
                         >
                           Read full note
@@ -108,6 +108,10 @@ export default function Saved({ loaderData }: Route.ComponentProps) {
 type SavedLesson =
   Route.ComponentProps["loaderData"]["savedBookmarks"][number]["lesson"];
 
+function lessonPath(lesson: SavedLesson) {
+  return `/courses/${lesson.courseSlug}/lessons/${lesson.id}`;
+}
+
 /** A row on the Saved page: a link to the Lesson, named with its Course. */
 function SavedLessonCard({
   lesson,
@@ -120,7 +124,7 @@ function SavedLessonCard({
     <Card className="gap-0 py-4">
       <CardContent className="min-w-0 space-y-1">
         <Link
-          to={`/courses/${lesson.courseSlug}/lessons/${lesson.id}`}
+          to={lessonPath(lesson)}
           className="text-sm font-medium hover:underline"
         >
           {lesson.title}
