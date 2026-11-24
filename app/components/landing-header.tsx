@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { useDarkMode } from "~/lib/use-dark-mode";
+import { useDarkMode } from "~/components/use-dark-mode";
 import { CadenceMark } from "~/components/cadence-mark";
 import { PillLink } from "~/components/pill-link";
 import { Moon, Sun } from "lucide-react";

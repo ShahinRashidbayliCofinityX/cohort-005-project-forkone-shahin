@@ -1,6 +1,6 @@
 import { NavLink, Form } from "react-router";
 import { cn } from "~/lib/utils";
-import { useDarkMode } from "~/lib/use-dark-mode";
+import { useDarkMode } from "~/components/use-dark-mode";
 import { UserRole } from "~/db/schema";
 import { UserAvatar } from "~/components/user-avatar";
 import { NotificationBell } from "~/components/notification-feed";
