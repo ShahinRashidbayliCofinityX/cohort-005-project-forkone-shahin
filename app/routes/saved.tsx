@@ -4,6 +4,7 @@ import { db } from "~/db";
 import { people } from "~/modules/permissions/person.server";
 import { listBookmarks } from "~/lib/bookmarks.server";
 import { listNotes } from "~/lib/notes.server";
+import { notePreview } from "~/modules/note-preview";
 import { Card, CardContent } from "~/components/ui/card";
 import { Bookmark, NotebookPen } from "lucide-react";
 import { formatRelativeTime } from "~/lib/utils";
@@ -72,18 +73,30 @@ export default function Saved({ loaderData }: Route.ComponentProps) {
             </Card>
           ) : (
             <div className="space-y-2">
-              {savedNotes.map((note) => (
-                <SavedLessonCard key={note.id} lesson={note.lesson}>
-                  {/* Plain text — a Note is never rendered as Markdown. */}
-                  <p className="whitespace-pre-wrap text-sm">{note.body}</p>
-                  <p
-                    suppressHydrationWarning
-                    className="text-xs text-muted-foreground"
-                  >
-                    Edited {formatRelativeTime(note.updatedAt)}
-                  </p>
-                </SavedLessonCard>
-              ))}
+              {savedNotes.map((note) => {
+                const preview = notePreview(note.body);
+                return (
+                  <SavedLessonCard key={note.id} lesson={note.lesson}>
+                    {/* Plain text — a Note is never rendered as Markdown. */}
+                    <p className="mt-2 whitespace-pre-wrap break-words border-l-2 border-border pl-3 text-sm leading-relaxed text-foreground/90 [overflow-wrap:anywhere]">
+                      {preview.text}
+                    </p>
+                    <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
+                      <span suppressHydrationWarning>
+                        Edited {formatRelativeTime(note.updatedAt)}
+                      </span>
+                      {preview.truncated && (
+                        <Link
+                          to={`/courses/${note.lesson.courseSlug}/lessons/${note.lesson.id}`}
+                          className="font-medium text-foreground hover:underline"
+                        >
+                          Read full note
+                        </Link>
+                      )}
+                    </div>
+                  </SavedLessonCard>
+                );
+              })}
             </div>
           )}
         </section>
@@ -104,8 +117,8 @@ function SavedLessonCard({
   children?: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardContent className="space-y-1 py-3">
+    <Card className="gap-0 py-4">
+      <CardContent className="min-w-0 space-y-1">
         <Link
           to={`/courses/${lesson.courseSlug}/lessons/${lesson.id}`}
           className="text-sm font-medium hover:underline"
