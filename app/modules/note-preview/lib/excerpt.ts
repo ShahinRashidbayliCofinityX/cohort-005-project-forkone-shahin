@@ -4,7 +4,7 @@ export type ExcerptLimits = { maxChars: number; maxLines: number };
 
 const ELLIPSIS = "…";
 
-/** Runs of three or more line breaks read as one paragraph break. */
+/** Extra blank lines would spend the line limit on nothing. */
 function collapseBlankLines(body: string): string {
   return body
     .replace(/\r\n?/g, "\n")
@@ -12,9 +12,9 @@ function collapseBlankLines(body: string): string {
 }
 
 /**
- * Looks one character past the limit to see whether the last word fits,
- * then drops it if it does not. A single word longer than the limit has no
- * space to cut at, so it is cut where it stands.
+ * Reads one character past the limit so a word ending exactly at it survives.
+ * A single word longer than the limit has no space to cut at, so it is cut
+ * where it stands.
  */
 function cutAtWord(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
@@ -27,8 +27,8 @@ function cutAtWord(text: string, maxChars: number): string {
 export function excerpt(body: string, limits: ExcerptLimits): NotePreview {
   const text = collapseBlankLines(body).trim();
   const keptLines = text.split("\n").slice(0, limits.maxLines).join("\n");
-  const cut = cutAtWord(keptLines.trimEnd(), limits.maxChars);
-  return cut === text
+  const kept = cutAtWord(keptLines.trimEnd(), limits.maxChars);
+  return kept === text
     ? { text, truncated: false }
-    : { text: cut + ELLIPSIS, truncated: true };
+    : { text: kept + ELLIPSIS, truncated: true };
 }
