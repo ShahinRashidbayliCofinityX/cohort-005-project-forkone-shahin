@@ -6,6 +6,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  /* Brand palette: https://2colors.colorion.co/palettes/navy-and-yellow/ */
+  --color-navy: #0a174e;
+  --color-navy-light: #1c2d6e;
+  --color-sunshine: #f5d042;
+  --color-sunshine-dark: #e3bc25;
   --font-sans:
     "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
