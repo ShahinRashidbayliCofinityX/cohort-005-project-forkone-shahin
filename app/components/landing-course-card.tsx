@@ -7,7 +7,7 @@ export function LandingCourseCard({ course }: { course: FeaturedCourse }) {
   return (
     <Link
       to={`/courses/${course.slug}`}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-1 hover:border-sunshine hover:shadow-xl"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-1 hover:border-sunshine hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunshine focus-visible:ring-offset-2"
     >
       <div className="relative">
         <CourseImage

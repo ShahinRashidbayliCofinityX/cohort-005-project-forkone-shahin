@@ -8,7 +8,9 @@ import {
   Layers,
 } from "lucide-react";
 import { DevUI } from "~/components/dev-ui";
-import { LandingHeader, YellowLink } from "~/components/landing-header";
+import { LandingHeader } from "~/components/landing-header";
+import { PillLink } from "~/components/pill-link";
+import { CadenceMark } from "~/components/cadence-mark";
 import { LandingCourseCard } from "~/components/landing-course-card";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
@@ -89,17 +91,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             progress, take quizzes, and build real-world skills.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-            <YellowLink to="/courses" size="lg">
+            <PillLink to="/courses" size="lg">
               Browse Courses
               <ArrowRight className="size-4" />
-            </YellowLink>
+            </PillLink>
             {!currentUser && (
-              <Link
-                to="/signup"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-white/30 px-6 font-semibold text-white transition-colors hover:border-sunshine hover:text-sunshine"
-              >
+              <PillLink to="/signup" size="lg" variant="outline">
                 Create a free account
-              </Link>
+              </PillLink>
             )}
           </div>
 
@@ -135,7 +134,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </div>
             <Link
               to="/courses"
-              className="inline-flex items-center gap-2 font-semibold text-navy underline-offset-4 hover:underline dark:text-sunshine"
+              className="inline-flex items-center gap-2 rounded-md font-semibold text-navy underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunshine dark:text-sunshine"
             >
               View all courses
               <ArrowRight className="size-4" />
@@ -152,15 +151,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <footer className="bg-navy py-10 text-white/60">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm sm:flex-row sm:px-6">
           <span className="flex items-center gap-2 font-semibold text-white">
-            <span
-              aria-hidden
-              className="flex size-6 items-center justify-center rounded bg-sunshine text-xs font-black text-navy"
-            >
-              C
-            </span>
+            <CadenceMark size="sm" />
             Cadence
           </span>
-          <Link to="/courses" className="hover:text-sunshine">
+          <Link
+            to="/courses"
+            className="rounded-md hover:text-sunshine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunshine"
+          >
             Browse courses
           </Link>
         </div>
