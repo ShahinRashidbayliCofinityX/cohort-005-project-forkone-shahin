@@ -1,121 +1,21 @@
 import { Link } from "react-router";
-import { useState, useEffect } from "react";
 import type { Route } from "./+types/home";
-import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "~/components/ui/card";
-import { CourseStatus } from "~/db/schema";
-import {
-  BookOpen,
-  GraduationCap,
-  Users,
   ArrowRight,
-  User,
-  Moon,
-  Sun,
+  BookOpen,
+  Clock,
+  GraduationCap,
+  Layers,
 } from "lucide-react";
-import { CourseImage } from "~/components/course-image";
 import { DevUI } from "~/components/dev-ui";
+import { LandingHeader, YellowLink } from "~/components/landing-header";
+import { LandingCourseCard } from "~/components/landing-course-card";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
-import { eq, like, and, or, sql } from "drizzle-orm";
+import { landing } from "~/modules/landing/index.server";
+import { eq } from "drizzle-orm";
 import { db } from "~/db";
-import { courses, categories, users, modules, lessons } from "~/db/schema";
-
-function getAllUsers() {
-  return db.select().from(users).all();
-}
-
-function getUserById(id: number) {
-  return db.select().from(users).where(eq(users.id, id)).get();
-}
-
-function getAllCategories() {
-  return db.select().from(categories).orderBy(categories.name).all();
-}
-
-function buildCourseQuery(
-  search: string | null,
-  category: string | null,
-  status: CourseStatus | null,
-  sortBy: string | null,
-  limit: number,
-  offset: number
-) {
-  const conditions = [];
-
-  if (status) {
-    conditions.push(eq(courses.status, status));
-  }
-
-  if (search) {
-    const term = `%${search}%`;
-    conditions.push(
-      or(like(courses.title, term), like(courses.description, term))
-    );
-  }
-
-  const query = db
-    .select({
-      id: courses.id,
-      title: courses.title,
-      slug: courses.slug,
-      description: courses.description,
-      salesCopy: courses.salesCopy,
-      instructorId: courses.instructorId,
-      categoryId: courses.categoryId,
-      status: courses.status,
-      coverImageUrl: courses.coverImageUrl,
-      price: courses.price,
-      pppEnabled: courses.pppEnabled,
-      createdAt: courses.createdAt,
-      updatedAt: courses.updatedAt,
-      instructorName: users.name,
-      instructorAvatarUrl: users.avatarUrl,
-      categoryName: categories.name,
-    })
-    .from(courses)
-    .innerJoin(users, eq(courses.instructorId, users.id))
-    .innerJoin(categories, eq(courses.categoryId, categories.id));
-
-  if (category) {
-    conditions.push(eq(categories.slug, category));
-  }
-
-  const filtered =
-    conditions.length > 0 ? query.where(and(...conditions)) : query;
-
-  const sorted =
-    sortBy === "title"
-      ? filtered.orderBy(courses.title)
-      : sortBy === "oldest"
-        ? filtered.orderBy(courses.createdAt)
-        : filtered.orderBy(sql`${courses.createdAt} DESC`);
-
-  return sorted.limit(limit).offset(offset).all();
-}
-
-function getLessonCountForCourse(courseId: number) {
-  const courseModules = db
-    .select({ id: modules.id })
-    .from(modules)
-    .where(eq(modules.courseId, courseId))
-    .all();
-
-  if (courseModules.length === 0) return 0;
-
-  const count = db
-    .select({ count: sql<number>`count(*)` })
-    .from(lessons)
-    .where(or(...courseModules.map((m) => eq(lessons.moduleId, m.id))))
-    .get();
-
-  return count?.count ?? 0;
-}
+import { users } from "~/db/schema";
 
 export function meta() {
   return [
@@ -129,35 +29,23 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const courses = buildCourseQuery(
-    null,
-    null,
-    CourseStatus.Published,
-    "newest",
-    50,
-    0
-  );
-  const featured = courses.slice(0, 3).map((course) => ({
-    ...course,
-    lessonCount: getLessonCountForCourse(course.id),
-  }));
-  const categories = getAllCategories();
-  const users = getAllUsers();
   const currentUserId = await getCurrentUserId(request);
-  const currentUser = currentUserId ? getUserById(currentUserId) : null;
+  const currentUser = currentUserId
+    ? db.select().from(users).where(eq(users.id, currentUserId)).get()
+    : null;
   const devCountry = await getDevCountry(request);
-  const countryTierInfo = getCountryTierInfo(devCountry);
 
   return {
-    featuredCourses: featured,
-    totalCourses: courses.length,
-    totalCategories: categories.length,
-    users: users.map((u) => ({ id: u.id, name: u.name, role: u.role })),
+    ...landing.get(),
+    users: db
+      .select({ id: users.id, name: users.name, role: users.role })
+      .from(users)
+      .all(),
     currentUser: currentUser
       ? { id: currentUser.id, name: currentUser.name, role: currentUser.role }
       : null,
     devCountry,
-    countryTierInfo,
+    countryTierInfo: getCountryTierInfo(devCountry),
     countries: COUNTRIES,
   };
 }
@@ -165,184 +53,116 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const {
     featuredCourses,
-    totalCourses,
-    totalCategories,
+    publishedCourseCount,
+    categoryCount,
     users,
     currentUser,
     devCountry,
     countryTierInfo,
     countries,
   } = loaderData;
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  function toggleDarkMode() {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    try {
-      localStorage.setItem("cadence-theme", next ? "dark" : "light");
-    } catch {}
-  }
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link to="/" className="text-xl font-bold tracking-tight">
-            Cadence
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link
-              to="/courses"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Courses
-            </Link>
-            <button
-              onClick={toggleDarkMode}
-              className="rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground"
-              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDark ? (
-                <Sun className="size-4" />
-              ) : (
-                <Moon className="size-4" />
-              )}
-            </button>
-            {currentUser ? (
-              <Button asChild size="sm">
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Log In
-                </Link>
-                <Button asChild size="sm">
-                  <Link to="/signup">Sign Up</Link>
-                </Button>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      <LandingHeader signedIn={currentUser !== null} />
 
-      <section className="mx-auto max-w-6xl px-6 py-24 text-center">
-        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
-          Learn to code,
-          <br />
-          <span className="text-muted-foreground">at your own pace</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          Structured courses built by experienced instructors. Track your
-          progress, take quizzes, and build real-world skills.
-        </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <Button asChild size="lg">
-            <Link to="/courses">
+      <section className="relative overflow-hidden bg-navy text-white">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-32 -top-32 size-96 rounded-full bg-sunshine/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-40 -left-24 size-96 rounded-full bg-navy-light blur-3xl"
+        />
+        <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pt-28">
+          <span className="inline-flex items-center gap-2 rounded-full border border-sunshine/40 bg-sunshine/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-sunshine">
+            <Clock className="size-3" />
+            Self-paced learning
+          </span>
+          <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
+            Learn to code,{" "}
+            <span className="text-sunshine">at your own pace</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-base text-white/70 sm:text-lg">
+            Structured courses built by experienced instructors. Track your
+            progress, take quizzes, and build real-world skills.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+            <YellowLink to="/courses" size="lg">
               Browse Courses
-              <ArrowRight className="ml-2 size-4" />
-            </Link>
-          </Button>
-        </div>
-      </section>
+              <ArrowRight className="size-4" />
+            </YellowLink>
+            {!currentUser && (
+              <Link
+                to="/signup"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-white/30 px-6 font-semibold text-white transition-colors hover:border-sunshine hover:text-sunshine"
+              >
+                Create a free account
+              </Link>
+            )}
+          </div>
 
-      <section className="border-y border-border bg-muted/50 py-16">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 sm:grid-cols-3">
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <BookOpen className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{totalCourses}</p>
-            <p className="text-sm text-muted-foreground">Available Courses</p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <GraduationCap className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{totalCategories}</p>
-            <p className="text-sm text-muted-foreground">Categories</p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">Self-paced</p>
-            <p className="text-sm text-muted-foreground">
-              Learn on your schedule
-            </p>
-          </div>
+          <dl className="mx-auto mt-16 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
+            <Stat
+              icon={BookOpen}
+              value={publishedCourseCount}
+              label="Courses"
+            />
+            <Stat icon={Layers} value={categoryCount} label="Categories" />
+            <Stat
+              icon={GraduationCap}
+              value="Self-paced"
+              label="Your schedule"
+            />
+          </dl>
         </div>
       </section>
 
       {featuredCourses.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 py-20">
-          <div className="mb-10 flex items-end justify-between">
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight">
-                Featured Courses
+              <p className="text-sm font-semibold uppercase tracking-widest text-navy dark:text-sunshine">
+                Just released
+              </p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight">
+                Newest courses
               </h2>
               <p className="mt-2 text-muted-foreground">
-                Start learning with our most popular courses
+                Fresh from our instructors
               </p>
             </div>
-            <Button asChild variant="outline">
-              <Link to="/courses">
-                View all
-                <ArrowRight className="ml-2 size-4" />
-              </Link>
-            </Button>
+            <Link
+              to="/courses"
+              className="inline-flex items-center gap-2 font-semibold text-navy underline-offset-4 hover:underline dark:text-sunshine"
+            >
+              View all courses
+              <ArrowRight className="size-4" />
+            </Link>
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featuredCourses.map((course) => (
-              <Link
-                key={course.id}
-                to={`/courses/${course.slug}`}
-                className="group"
-              >
-                <Card className="h-full overflow-hidden pt-0 transition-shadow group-hover:shadow-md">
-                  <CourseImage
-                    src={course.coverImageUrl}
-                    alt={course.title}
-                    className="aspect-video w-full object-cover"
-                  />
-                  <CardHeader>
-                    <h3 className="font-semibold leading-snug group-hover:text-primary">
-                      {course.title}
-                    </h3>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {course.description}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <User className="size-3" />
-                      {course.instructorName ?? "Instructor"}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="size-3" />
-                      {course.lessonCount} lessons
-                    </span>
-                  </CardFooter>
-                </Card>
-              </Link>
+              <LandingCourseCard key={course.id} course={course} />
             ))}
           </div>
         </section>
       )}
 
-      <footer className="border-t border-border py-8">
-        <div className="mx-auto max-w-6xl px-6 text-center text-sm text-muted-foreground">
-          Cadence
+      <footer className="bg-navy py-10 text-white/60">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm sm:flex-row sm:px-6">
+          <span className="flex items-center gap-2 font-semibold text-white">
+            <span
+              aria-hidden
+              className="flex size-6 items-center justify-center rounded bg-sunshine text-xs font-black text-navy"
+            >
+              C
+            </span>
+            Cadence
+          </span>
+          <Link to="/courses" className="hover:text-sunshine">
+            Browse courses
+          </Link>
         </div>
       </footer>
 
@@ -353,6 +173,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         countryTierInfo={countryTierInfo}
         countries={countries}
       />
+    </div>
+  );
+}
+
+function Stat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: typeof BookOpen;
+  value: number | string;
+  label: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-5 backdrop-blur">
+      <dt className="flex items-center justify-center gap-2 text-sm text-white/60">
+        <Icon className="size-4 text-sunshine" />
+        {label}
+      </dt>
+      <dd className="mt-1 text-3xl font-bold text-white">{value}</dd>
     </div>
   );
 }
